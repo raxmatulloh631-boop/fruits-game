@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sodda Shooter O'yini</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #222; font-family: sans-serif; }
+        canvas { display: block; background: #333; cursor: crosshair; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <div id="ui">Ball: <span id="score">0</span></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let score = 0;
+        let targets = [];
+
+        // Nishon (Dushman) yaratish
+        function createTarget() {
+            const x = Math.random() * (canvas.width - 50);
+            const y = Math.random() * (canvas.height - 50);
+            targets.push({ x, y, size: 40, color: 'red' });
+        }
+
+        // Chizish funksiyasi
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            targets.forEach((target, index) => {
+                ctx.fillStyle = target.color;
+                ctx.fillRect(target.x, target.y, target.size, target.size);
+            });
+            requestAnimationFrame(draw);
+        }
+
+        // Sichqoncha bilan otish
+        canvas.addEventListener('mousedown', (e) => {
+            targets.forEach((target, index) => {
+                if (e.clientX >= target.x && e.clientX <= target.x + target.size &&
+                    e.clientY >= target.y && e.clientY <= target.y + target.size) {
+                    targets.splice(index, 1);
+                    score += 10;
+                    scoreElement.innerText = score;
+                    createTarget(); // Yangi nishon chiqishi
+                }
+            });
+        });
+
+        // O'yinni boshlash
+        createTarget();
+        draw();
+    </script>
+</body>
+</html>
