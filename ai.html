@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Yordamchi</title>
+    <style>
+        /* Sayt ko'rinishi (CSS) */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        #chat-container { width: 100%; max-width: 450px; background: white; height: 90vh; display: flex; flex-direction: column; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; }
+        #chat-header { background: #0084ff; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 1.2em; }
+        #chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; background: #ffffff; }
+        .msg { padding: 10px 15px; border-radius: 18px; max-width: 80%; font-size: 15px; line-height: 1.4; word-wrap: break-word; }
+        .user { align-self: flex-end; background-color: #0084ff; color: white; border-bottom-right-radius: 2px; }
+        .ai { align-self: flex-start; background-color: #e4e6eb; color: black; border-bottom-left-radius: 2px; }
+        #input-area { padding: 15px; border-top: 1px solid #ddd; display: flex; gap: 10px; background: #f9f9f9; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 14px; }
+        button { background: #0084ff; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #0073e6; }
+        .loading { font-style: italic; color: #888; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <div id="chat-header">AI Chatbot Yordamchi</div>
+    <div id="chat-box" id="chatBox">
+        <div class="msg ai">Salom! Men sizning sun'iy intellekt yordamchingizman. Qanday savolingiz bor?</div>
+    </div>
+    <div id="input-area">
+        <input type="text" id="userInput" placeholder="Savolingizni yozing..." onkeypress="if(event.key === 'Enter') sendMessage()">
+        <button onclick="sendMessage()">Yuborish</button>
+    </div>
+</div>
+
+<script>
+    // DIQQAT: API kalitingizni mana shu yerga qo'ying
+    const API_KEY = "SIZNING_API_KALITINGIZ"; 
+
+    async function sendMessage() {
+        const input = document.getElementById('userInput');
+        const chatBox = document.getElementById('chat-box');
+        const text = input.value.trim();
+        
+        if (!text) return;
+
+        // 1. Foydalanuvchi xabarini ko'rsatish
+        chatBox.innerHTML += `<div class="msg user">${text}</div>`;
+        input.value = '';
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // 2. "O'ylamoqda..." yozuvini chiqarish
+        const loadingId = "load-" + Date.now();
+        chatBox.innerHTML += `<div class="loading" id="${loadingId}">AI javob qaytarmoqda...</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            // 3. Google Gemini API-ga so'rov yuborish
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: text }] }]
+                })
+            });
+
+            const data = await response.json();
+            
+            // Yuklanish yozuvini o'chirish
+            document.getElementById(loadingId).remove();
+
+            if (data.candidates && data.candidates[0].content.parts[0].text) {
+                const aiResponse = data.candidates[0].content.parts[0].text;
+                chatBox.innerHTML += `<div class="msg ai">${aiResponse}</div>`;
+            } else {
+                chatBox.innerHTML += `<div class="msg ai">Kechirasiz, javob topa olmadim.</div>`;
+            }
+        } catch (error) {
+            document.getElementById(loadingId).remove();
+            chatBox.innerHTML += `<div class="msg ai" style="color:red;">Xatolik: API kalit xato yoki internet yo'q.</div>`;
+            console.error(error);
+        }
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+</script>
+
+</body>
+</html>
