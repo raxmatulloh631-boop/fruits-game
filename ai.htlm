@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>Sodda AI Chat</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+        #chat-box { height: 300px; overflow-y: auto; background: white; padding: 10px; border: 1px solid #ccc; margin-bottom: 10px; }
+        input { width: 70%; padding: 10px; }
+        button { padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h2>Sun'iy Intellekt bilan suhbat</h2>
+    
+    <div id="chat-box"></div>
+    
+    <input type="text" id="userInput" placeholder="Savol yozing...">
+    <button onclick="sendMessage()">Yuborish</button>
+
+    <script>
+        // ************************************************************
+        // MANA SHU YERGA API KALITINGIZNI QO'YING:
+        const API_KEY = "AIzaSyBvLtYWEQGrz7L6Dw-m0oKuPkgoUR4jyew";
+        // ************************************************************
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const chatBox = document.getElementById('chat-box');
+            
+            if (!input.value) return;
+
+            // Sizning xabaringiz
+            chatBox.innerHTML += `<p><b>Siz:</b> ${input.value}</p>`;
+            const userText = input.value;
+            input.value = "";
+
+            try {
+                // Sun'iy intellektga so'rov
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: userText }] }] })
+                });
+
+                const data = await response.json();
+                const aiResponse = data.candidates[0].content.parts[0].text;
+
+                // AI javobi
+                chatBox.innerHTML += `<p><b>AI:</b> ${aiResponse}</p>`;
+            } catch (error) {
+                chatBox.innerHTML += `<p style="color:red;">Xato: API kalitni tekshiring!</p>`;
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+
+</body>
+</html>
