@@ -2,54 +2,213 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yordamchi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mevalar Jangi: Level Edition</title>
     <style>
-        body { font-family: 'Arial', sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        #chat-container { width: 100%; max-width: 500px; background: #fff; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 12px; }
-        #chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .message { padding: 10px 15px; border-radius: 20px; font-size: 15px; max-width: 80%; }
-        .user-msg { align-self: flex-end; background-color: #007bff; color: white; }
-        .ai-msg { align-self: flex-start; background-color: #e9e9eb; color: #333; }
-        #input-area { display: flex; padding: 20px; border-top: 1px solid #eee; }
-        input { flex: 1; border: 1px solid #ddd; padding: 12px; border-radius: 25px; outline: none; }
-        button { background: #007bff; color: white; border: none; padding: 10px 20px; margin-left: 10px; border-radius: 25px; cursor: pointer; }
+        body { margin: 0; background: #111; overflow: hidden; font-family: 'Arial Black', sans-serif; touch-action: none; }
+        canvas { display: block; background: linear-gradient(to bottom, #000428, #004e92); }
+
+        /* Menu */
+        #menu {
+            position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.9);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100;
+        }
+        #menu h1 { color: #fff; font-size: 40px; text-shadow: 0 0 15px #0f0; margin: 10px; text-align: center; }
+        .lvl-select { margin: 20px; color: white; font-size: 20px; }
+        select { padding: 10px; font-size: 18px; border-radius: 10px; cursor: pointer; }
+        .start-btn { padding: 15px 50px; font-size: 22px; background: #28a745; color: #fff; border: none; border-radius: 30px; cursor: pointer; }
+
+        /* HUD */
+        #hud {
+            position: absolute; top: 15px; left: 15px; color: #fff; font-size: 18px;
+            pointer-events: none; z-index: 10; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px;
+        }
+
+        /* Controls */
+        .controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-around; pointer-events: none; }
+        .btn {
+            width: 75px; height: 75px; background: rgba(255, 255, 255, 0.2);
+            border: 3px solid #fff; border-radius: 50%; display: flex;
+            justify-content: center; align-items: center; color: white; font-size: 25px;
+            pointer-events: auto; user-select: none;
+        }
+        #fireBtn { background: rgba(255, 0, 0, 0.5); font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div id="chat-container">
-    <div id="chat-box">
-        <div class="message ai-msg">Salom! Men sizning yangi sun'iy intellekt yordamchingizman. Qanday savolingiz bor?</div>
+    <div id="menu">
+        <div style="font-size: 50px;">🍎 🍇 🍊</div>
+        <h1>MEVALAR JANGI</h1>
+        <div class="lvl-select">
+            DARAJANI TANLANG:
+            <select id="lvlChoice">
+                <option value="1">LEVEL 1 (Oson)</option>
+                <option value="2">LEVEL 2 (O'rtacha)</option>
+                <option value="3">LEVEL 3 (Qiyin)</option>
+                <option value="5">LEVEL 5 (Ekspert)</option>
+                <option value="10">LEVEL 10 (Aqlsizlar uchun)</option>
+            </select>
+        </div>
+        <button class="start-btn" onclick="startGame()">O'YINNI BOSHLASH</button>
     </div>
-    <div id="input-area">
-        <input type="text" id="user-input" placeholder="Savol bering...">
-        <button onclick="sendMessage()">Yuborish</button>
+
+    <div id="hud">
+        LEVEL: <span id="lvlDisp">1</span> |
+        GOAL: <span id="scoreDisp">0</span>/<span id="targetDisp">50</span> |
+        HP: <span id="hpDisp">100</span>%
     </div>
-</div>
 
-<script>
-    async function sendMessage() {
-        const input = document.getElementById('user-input');
-        const chatBox = document.getElementById('chat-box');
-        const userText = input.value.trim();
-        if (!userText) return;
+    <canvas id="gameCanvas"></canvas>
 
-        chatBox.innerHTML += `<div class="message user-msg">${userText}</div>`;
-        input.value = '';
-        chatBox.scrollTop = chatBox.scrollHeight;
+    <div class="controls">
+        <div class="btn" id="leftBtn">←</div>
+        <div class="btn" id="fireBtn">OTISH</div>
+        <div class="btn" id="rightBtn">→</div>
+    </div>
 
-        try {
-            // API ulanmaguncha vaqtinchalik javob
-            setTimeout(() => {
-                chatBox.innerHTML += `<div class="message ai-msg">Hozircha men faqat takrorlay olaman: ${userText}. Tez orada API ulaymiz!</div>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }, 1000);
-        } catch (e) {
-            console.error("Xato:", e);
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let gameActive = false;
+
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let currentLvl = 1;
+        let score = 0;
+        let targetScore = 50;
+        const player = { x: 0, y: 0, w: 50, h: 45, speed: 8, hp: 100 };
+        const bullets = [], enemies = [];
+        const fruits = ['🍎', '🍌', '🍇', '🍓', '🍊', '🍍', '🍉'];
+        const touchControls = { left: false, right: false };
+        const keys = {};
+
+        // Klaviatura
+        window.onkeydown = (e) => keys[e.code] = true;
+        window.onkeyup = (e) => keys[e.code] = false;
+
+        function startGame() {
+            currentLvl = parseInt(document.getElementById('lvlChoice').value);
+            targetScore = currentLvl * 100;
+            score = 0;
+            player.hp = 100;
+            player.x = canvas.width / 2 - 25;
+            player.y = canvas.height - 150;
+
+            document.getElementById('lvlDisp').innerText = currentLvl;
+            document.getElementById('targetDisp').innerText = targetScore;
+            document.getElementById('scoreDisp').innerText = 0;
+            document.getElementById('hpDisp').innerText = 100;
+
+            enemies.length = 0;
+            bullets.length = 0;
+
+            for(let i=0; i < 5 + currentLvl; i++) spawnEnemy();
+
+            document.getElementById('menu').style.display = 'none';
+            gameActive = true;
+            animate();
         }
-    }
-</script>
 
+        function spawnEnemy() {
+            enemies.push({
+                x: Math.random() * (canvas.width - 40),
+                y: -Math.random() * 500,
+                w: 40, h: 40,
+                speed: 2 + (currentLvl * 0.3) + Math.random() * 2,
+                type: fruits[Math.floor(Math.random() * fruits.length)],
+                sin: Math.random() * 10
+            });
+        }
+
+        // Tugmalar mantiqi
+        document.getElementById('leftBtn').addEventListener('touchstart', (e) => { e.preventDefault(); touchControls.left = true; });
+        document.getElementById('leftBtn').addEventListener('touchend', () => touchControls.left = false);
+        document.getElementById('rightBtn').addEventListener('touchstart', (e) => { e.preventDefault(); touchControls.right = true; });
+        document.getElementById('rightBtn').addEventListener('touchend', () => touchControls.right = false);
+        document.getElementById('fireBtn').addEventListener('touchstart', (e) => { e.preventDefault(); shoot(); });
+
+        function shoot() { if(gameActive && bullets.length < 10) bullets.push({ x: player.x + player.w/2 - 3, y: player.y, w: 6, h: 18 }); }
+
+        function update() {
+            if(!gameActive) return;
+
+            // Yurish (Klaviatura + Tugmalar)
+            if ((keys['ArrowLeft'] || touchControls.left) && player.x > 0) player.x -= player.speed;
+            if ((keys['ArrowRight'] || touchControls.right) && player.x < canvas.width - player.w) player.x += player.speed;
+            if (keys['Space']) { shoot(); keys['Space'] = false; }
+
+            // O'qlar
+            bullets.forEach((b, i) => {
+                b.y -= 10;
+                if(b.y < 0) bullets.splice(i, 1);
+            });
+
+            // Mevalar
+            enemies.forEach((e, i) => {
+                e.y += e.speed;
+                e.x += Math.sin(e.y * 0.02 + e.sin) * 1.5;
+
+                // Urib tushirish
+                bullets.forEach((b, bi) => {
+                    if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
+                        enemies.splice(i, 1);
+                        bullets.splice(bi, 1);
+                        score += 10;
+                        document.getElementById('scoreDisp').innerText = score;
+                        spawnEnemy();
+
+                        // G'alaba sharti
+                        if (score >= targetScore) {
+                            gameActive = false;
+                            alert("TABRIKLAYMIZ! Level " + currentLvl + " yutildi!");
+                            location.reload();
+                        }
+                    }
+                });
+
+                // O'yinchiga tegsa
+                if (e.x < player.x + player.w && e.x + e.w > player.x && e.y < player.y + player.h && e.y + e.h > player.y) {
+                    player.hp -= 10;
+                    document.getElementById('hpDisp').innerText = player.hp;
+                    enemies.splice(i, 1);
+                    spawnEnemy();
+                    if(player.hp <= 0) {
+                        gameActive = false;
+                        alert("YUTQAZDINGIZ! HP tugadi.");
+                        location.reload();
+                    }
+                }
+
+                if (e.y > canvas.height) { enemies.splice(i, 1); spawnEnemy(); }
+            });
+        }
+
+        function animate() {
+            if(!gameActive) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Player
+            ctx.fillStyle = '#00ffcc';
+            ctx.beginPath();
+            ctx.moveTo(player.x + player.w/2, player.y);
+            ctx.lineTo(player.x, player.y + player.h);
+            ctx.lineTo(player.x + player.w, player.y + player.h);
+            ctx.fill();
+
+            // Bullets
+            ctx.fillStyle = '#ff0';
+            bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+
+            // Fruits
+            ctx.font = '30px Arial';
+            enemies.forEach(e => ctx.fillText(e.type, e.x, e.y + 30));
+
+            update();
+            requestAnimationFrame(animate);
+        }
+    </script>
 </body>
 </html>
